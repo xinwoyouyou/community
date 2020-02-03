@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.naming.Name;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.UUID;
 
 /**
@@ -37,7 +39,7 @@ public class AuthorizeController {
     @GetMapping("/callback")
     public String callback(@RequestParam(name = "code") String code,
                            @RequestParam(name = "state") String state,
-                           HttpServletRequest request) {
+                           HttpServletResponse response) {
         final AccessTokenDTO tokenDTO = new AccessTokenDTO();
         tokenDTO.setClient_id(client_id);
         tokenDTO.setClient_secret(client_secret);
@@ -48,14 +50,16 @@ public class AuthorizeController {
         final GitHupUser gitHupUser = provider.gitUser(accessToken);
         if (gitHupUser != null) {
             final User user = new User();
-            user.setToken(UUID.randomUUID().toString());
+            final String token = UUID.randomUUID().toString();
+            user.setToken(token);
             user.setName(gitHupUser.getName());
             user.setAccount_id(String.valueOf(gitHupUser.getId()));
             user.setGmt_create(System.currentTimeMillis());
             user.setGmt_modified(user.getGmt_create());
             userMapper.insert(user);
-            //登录成功,写cookie和session
-            request.getSession().setAttribute("user", gitHupUser);
+            response.addCookie(new Cookie("token", token));
+
+
         } else {
             //登录失败,重新登录
         }
